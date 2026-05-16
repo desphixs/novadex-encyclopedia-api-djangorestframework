@@ -1,8 +1,23 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from .models import Planet, Creature
 from .serializers import PlanetSerializer, CreatureSerializer
+
+# We define a custom pagination class to control how many results 
+# the user sees per page.
+# Analogy: This is like a book having only 5 entries per page so 
+# the reader doesn't get overwhelmed.
+class CreaturePagination(PageNumberPagination):
+    # Default number of results per page
+    page_size = 5
+    
+    # Allows the user to choose their own page size via a query param (e.g., ?page_size=10)
+    page_size_query_param = 'page_size'
+    
+    # Prevents users from requesting too much data and slowing down the system
+    max_page_size = 50
 
 # The PlanetList view is like a librarian for our Planets.
 # It handles two main jobs:
@@ -99,10 +114,21 @@ class CreatureList(APIView):
         # We fetch all creatures from our galactic database.
         creatures = Creature.objects.all()
         
-        # We use the CreatureSerializer to translate them into JSON.
-        # Remember: This will include the full planet details because of our nesting!
-        serializer = CreatureSerializer(creatures, many=True)
+        # We instantiate our custom paginator.
+        paginator = CreaturePagination()
         
+        # We ask the paginator to slice our data into a single page.
+        page = paginator.paginate_queryset(creatures, request)
+        
+        if page is not None:
+            # We translate only the sliced page of creatures.
+            serializer = CreatureSerializer(page, many=True)
+            # We return a special paginated response that includes metadata 
+            # like 'count', 'next', and 'previous'.
+            return paginator.get_paginated_response(serializer.data)
+
+        # If for some reason pagination isn't needed, we return the full list.
+        serializer = CreatureSerializer(creatures, many=True)
         return Response(serializer.data)
 
     # This method handles the POST request (adding a new creature).
