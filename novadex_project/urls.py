@@ -15,8 +15,11 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # This connects our main project to the specific 'creatures' app.
+    # Any URL starting with 'api/' will be handed over to creatures/urls.py.
+    path('api/', include('creatures.urls')),
 ]
