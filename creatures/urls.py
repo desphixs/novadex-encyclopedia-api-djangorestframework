@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import PlanetList, PlanetDetail
+from .views import PlanetList, PlanetDetail, CreatureList
 
 # This file handles the 'map' for the creatures app.
 # It tells Django which view should handle which URL path.
@@ -8,7 +8,8 @@ urlpatterns = [
     path('planets/', PlanetList.as_view(), name='planet-list'),
     
     # When someone visits 'api/planets/1/', the PlanetDetail view takes over.
-    # The <int:pk> part tells Django to grab the number from the URL 
-    # and pass it to our view as a variable called 'pk'.
     path('planets/<int:pk>/', PlanetDetail.as_view(), name='planet-detail'),
+    
+    # When someone visits 'api/creatures/', the CreatureList view takes over.
+    path('creatures/', CreatureList.as_view(), name='creature-list'),
 ]

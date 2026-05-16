@@ -90,3 +90,40 @@ class PlanetDetail(APIView):
         
         # We return a 204 No Content because the planet is gone!
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+# The CreatureList view is like an explorer's logbook.
+# It allows us to see all discovered creatures and log new ones.
+class CreatureList(APIView):
+    # This method handles the GET request (listing creatures).
+    def get(self, request):
+        # We fetch all creatures from our galactic database.
+        creatures = Creature.objects.all()
+        
+        # We use the CreatureSerializer to translate them into JSON.
+        # Remember: This will include the full planet details because of our nesting!
+        serializer = CreatureSerializer(creatures, many=True)
+        
+        return Response(serializer.data)
+
+    # This method handles the POST request (adding a new creature).
+    def post(self, request):
+        # We give the incoming data to the translator.
+        serializer = CreatureSerializer(data=request.data)
+        
+        # We check if the name, danger level, etc., are all valid.
+        if serializer.is_valid():
+            # IMPORTANT: Because the 'planet' field in our serializer is read-only 
+            # (to show the full object on GET), we have to tell Django exactly 
+            # which planet ID to link this new creature to.
+            # We grab 'planet_id' from the raw data sent by the user.
+            planet_id = request.data.get('planet_id')
+            
+            # We save the creature and manually 'stitch' it to the planet.
+            # Analogy: This is like a doctor filling out a birth certificate (creature) 
+            # and manually writing down the hospital's address (planet ID).
+            serializer.save(planet_id=planet_id)
+            
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        # If the user forgot a field or sent bad data, we let them know.
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
