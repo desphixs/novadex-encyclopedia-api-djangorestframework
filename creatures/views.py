@@ -70,7 +70,7 @@ class PlanetDetail(APIView):
         
         # We pass the 'planet' instance we found AND the new data from the user.
         # This tells the serializer to update the existing record instead of creating a new one.
-        serializer = PlanetSerializer(planet, data=request.data)
+        serializer = PlanetSerializer(planet, data=request.data, partial=True)
         
         if serializer.is_valid():
             serializer.save()
@@ -127,3 +127,57 @@ class CreatureList(APIView):
         
         # If the user forgot a field or sent bad data, we let them know.
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# The CreatureDetail view is like looking at a single creature's profile page.
+# It handles retrieving, updating, and deleting one specific creature.
+class CreatureDetail(APIView):
+    # This helper method looks up a creature by its ID.
+    def get_object(self, pk):
+        try:
+            return Creature.objects.get(pk=pk)
+        except Creature.DoesNotExist:
+            return None
+
+    # Retrieve one creature (GET)
+    def get(self, request, pk):
+        creature = self.get_object(pk)
+        if creature is None:
+            return Response({"error": "Creature not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Serialize the single creature object.
+        serializer = CreatureSerializer(creature)
+        return Response(serializer.data)
+
+    # Update a creature (PUT)
+    def put(self, request, pk):
+        creature = self.get_object(pk)
+        if creature is None:
+            return Response({"error": "Creature not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # We pass the existing creature and the new data to the translator.
+        serializer = CreatureSerializer(creature, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            # First, we save the basic creature fields (name, description, etc.)
+            serializer.save()
+            
+            # Now, just like in Task 7, we handle the planet update.
+            # Because 'planet' is read-only in the serializer, we manually update 
+            # the 'planet_id' on the database object if the user provided one.
+            planet_id = request.data.get('planet_id')
+            if planet_id:
+                creature.planet_id = planet_id
+                creature.save()
+            
+            return Response(serializer.data)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Delete a creature (DELETE)
+    def delete(self, request, pk):
+        creature = self.get_object(pk)
+        if creature is None:
+            return Response({"error": "Creature not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        creature.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
