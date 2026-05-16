@@ -36,6 +36,57 @@ class PlanetList(APIView):
             # Analogy: This is like a store clerk handing you a receipt and saying "Order Complete!"
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
-        # If the data was bad (e.g., missing a name), we return the error messages.
         # We also send a '400 Bad Request' status to let the user know they messed up.
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# The PlanetDetail view is like a specific store manager handling one single product.
+# This view handles operations on a specific planet using its ID (pk).
+class PlanetDetail(APIView):
+    # This helper method saves us from writing the same try/except block 3 times.
+    # Analogy: This is like a security guard checking if a specific room exists 
+    # before letting you try to enter, clean, or demolish it.
+    def get_object(self, pk):
+        try:
+            return Planet.objects.get(pk=pk)
+        except Planet.DoesNotExist:
+            return None
+
+    # Retrieve a single planet (GET)
+    def get(self, request, pk):
+        planet = self.get_object(pk)
+        if planet is None:
+            # If the planet doesn't exist, we send back a 404.
+            # Analogy: This is like looking for a book in a library that isn't in the catalog.
+            return Response({"error": "Planet not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = PlanetSerializer(planet)
+        return Response(serializer.data)
+
+    # Update a single planet (PUT)
+    def put(self, request, pk):
+        planet = self.get_object(pk)
+        if planet is None:
+            return Response({"error": "Planet not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # We pass the 'planet' instance we found AND the new data from the user.
+        # This tells the serializer to update the existing record instead of creating a new one.
+        serializer = PlanetSerializer(planet, data=request.data)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    # Delete a single planet (DELETE)
+    def delete(self, request, pk):
+        planet = self.get_object(pk)
+        if planet is None:
+            return Response({"error": "Planet not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # We permanently remove the planet from the database.
+        # Analogy: This is like deleting a file from your computer's trash bin.
+        planet.delete()
+        
+        # We return a 204 No Content because the planet is gone!
+        return Response(status=status.HTTP_204_NO_CONTENT)
